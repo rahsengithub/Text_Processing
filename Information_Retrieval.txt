@@ -1,0 +1,140 @@
+import math
+class Retrieve:
+    # Create new Retrieve object storing index and termWeighting scheme
+    def __init__(self,index, termWeighting):
+        self.index = index
+        self.termWeighting = termWeighting
+        self.termsInDocDict = {}
+        for j in self.index:
+            for k in self.index[j]:
+                if k in self.termsInDocDict:
+                    self.termsInDocDict[k] += 1
+                else:
+                    self.termsInDocDict[k] = 1
+        self.docstermsDict = {}
+        for j in self.index:
+            for k in self.index[j]:
+                if k in self.docstermsDict:
+                    self.docstermsDict[k] += (self.index[j][k])**2
+                else:
+                    self.docstermsDict[k] = (self.index[j][k])**2
+        self.invertedIndex = {}
+        self.totalNoDocs = len(self.termsInDocDict)
+        
+        for tfidf in self.index:
+            idf = len(self.index[tfidf])
+            idf = self.totalNoDocs/idf
+            idf = math.log(idf, 10)
+            self.invertedIndex[tfidf] = idf
+        
+        self.tfidfcalcDict = {}
+        for j in self.index:
+            for k in self.index[j]:
+                if k in self.tfidfcalcDict:
+                    self.tfidfcalcDict[k] += (self.index[j][k]*self.invertedIndex[j])**2
+                else:
+                    self.tfidfcalcDict[k] = (self.index[j][k]*self.invertedIndex[j])**2
+
+    
+    # Method performing retrieval for specified query
+    def forQuery(self, query):
+        cand = Retrieve.candidatePicker(self.index, query)
+        if(self.termWeighting == 'binary'):
+            tW_binary = Retrieve.binary(self, self.index, cand, query)
+            return tW_binary
+        elif(self.termWeighting == 'tf'):
+            tW_tf = Retrieve.termFrequency(self, self.index, cand, query)
+            return tW_tf
+        else:
+            tW_tfidf = Retrieve.tfIdf(self, self.index, cand, query)
+            return tW_tfidf
+       
+    def candidatePicker(index, query):
+        candidate_list = []
+        for keys in query:
+            if keys not in index:
+                continue
+            for candi in index[keys]:
+                if candi in candidate_list:
+                    continue
+                candidate_list.append(candi)
+        unique_candidate_list = list(set(candidate_list))
+        return(unique_candidate_list)
+        
+    def binary(self, index, candidate, query):
+        mydict = {}
+        for doc_id in candidate:
+            q_id_i = 0
+            d_i = self.termsInDocDict[doc_id]
+            for q in query:
+                try:
+                    if doc_id in self.index[q]:
+                        q_id_i += 1
+                except:
+                    continue
+            mydict[doc_id] = q_id_i/math.sqrt(d_i)
+        ranked_mydict = sorted(mydict, key = mydict.__getitem__, reverse = True)[:10]
+        return(ranked_mydict)
+    
+    def termFrequency(self, index, candidate, query):
+        mydict = {}
+        for doc_id in candidate:
+            q_id_i = 0
+            d_i = self.docstermsDict[doc_id]
+            for q in query:
+                try:
+                    if doc_id in self.index[q]:
+                        q_id_i += self.index[q][doc_id]
+                except:
+                    continue
+            mydict[doc_id] = q_id_i/math.sqrt(d_i)
+        ranked_mydict = sorted(mydict, key = mydict.__getitem__, reverse = True)[:10]
+        return(ranked_mydict)
+    
+    def tfIdf(self, index, candidate, query):
+        mydict = {}
+        for doc_id in candidate:
+            q_id_i = 0
+            d_i = self.tfidfcalcDict[doc_id]
+            for q in query:
+                try:
+                    if doc_id in self.index[q]:
+                        q_id_i += self.index[q][doc_id]*query[q]*(self.invertedIndex[q]**2)
+                except:
+                    continue
+            mydict[doc_id] = q_id_i/math.sqrt(d_i)
+        ranked_mydict = sorted(mydict, key = mydict.__getitem__, reverse = True)[:10]
+        return(ranked_mydict)
+
+""" def tf(index, query):
+        index = list(index.keys())
+        Counter(index.split()).most_common()"""
+        
+    
+        
+"""
+    def binary(index, candidate, query):
+        for elements in candidate:
+            count = 0
+            match = 0
+            mydict = {}
+            for x in index:
+                if elements in index[x]:
+                    count += 1
+            mydict.update({elements : math.sqrt(count)})
+        for key in mydict:
+            for z in query:
+                if key in index[z]:
+                    match += 1
+            mydict[key] = match/mydict[key]
+        return(mydict)
+"""
+
+            
+        
+"""
+        if(self.termWeighting == 'binary'):
+            tW_binary = Retrieve.binary(self.index, cand, query)
+            return tW_binary
+""" 
+
